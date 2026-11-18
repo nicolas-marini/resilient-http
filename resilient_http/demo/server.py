@@ -11,6 +11,7 @@ import webbrowser
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
+from urllib.parse import urlsplit
 
 from .simulator import Scenario, simulate
 
@@ -20,17 +21,22 @@ MAX_BODY = 64 * 1024
 class DashboardHandler(BaseHTTPRequestHandler):
     server_version = "ResilientHttpDemo/0.1"
 
+    @property
+    def route(self) -> str:
+        """Caminho sem query string (``/?theme=dark`` -> ``/``)."""
+        return urlsplit(self.path).path
+
     def do_GET(self) -> None:
-        if self.path in ("/", "/index.html"):
+        if self.route in ("/", "/index.html"):
             body = resources.files(__package__).joinpath("index.html").read_bytes()
             self._send(HTTPStatus.OK, body, "text/html; charset=utf-8")
-        elif self.path == "/api/defaults":
+        elif self.route == "/api/defaults":
             self._json(HTTPStatus.OK, Scenario().__dict__)
         else:
             self._json(HTTPStatus.NOT_FOUND, {"error": "não encontrado"})
 
     def do_POST(self) -> None:
-        if self.path != "/api/simulate":
+        if self.route != "/api/simulate":
             self._json(HTTPStatus.NOT_FOUND, {"error": "não encontrado"})
             return
         length = int(self.headers.get("Content-Length") or 0)

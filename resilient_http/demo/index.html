@@ -202,7 +202,7 @@ function renderTimeline(){
   const L = 92, R = 12, T = 8;
   const dur = Math.max(last.duration, 0.001);
   const x = t => L + (W - L - R) * (t / dur);
-  const rowH = Math.max(4, Math.min(12, 360 / reqs.length));
+  const rowH = Math.max(4, Math.min(14, 600 / reqs.length));
   const laneServer = T, laneCB = T + 22, laneTok = T + 44, tokH = 40, laneReq = laneTok + tokH + 14;
   const H = laneReq + rowH * reqs.length + 26;
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("height", H);
@@ -296,7 +296,8 @@ function niceStep(d){ const raw = d / 8, p = 10 ** Math.floor(Math.log10(raw)); 
 function escapeHtml(s){ return s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
 function initTheme(){
-  let t = null; try { t = localStorage.getItem("rl-theme"); } catch {}
+  let t = new URLSearchParams(location.search).get("theme");
+  if (!t) { try { t = localStorage.getItem("rl-theme"); } catch {} }
   if (t) document.documentElement.dataset.theme = t;
   $("#theme").onclick = () => {
     const dark = matchMedia("(prefers-color-scheme: dark)").matches;
@@ -314,6 +315,8 @@ function initTheme(){
   $("#presets").innerHTML = Object.keys(PRESETS).map(p => `<button type="button">${p}</button>`).join("");
   $("#presets").querySelectorAll("button").forEach(b => b.onclick = () => { setValues({...defaults, ...PRESETS[b.textContent]}); run(); });
   buildForm();
+  const preset = new URLSearchParams(location.search).get("preset");
+  if (preset && PRESETS[preset]) setValues({...defaults, ...PRESETS[preset]});
   $("#run").onclick = run;
   addEventListener("resize", debounce(renderTimeline, 120));
   run();

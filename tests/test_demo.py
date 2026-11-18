@@ -38,6 +38,8 @@ def test_http_server_end_to_end():
     try:
         html = urllib.request.urlopen(base + "/").read().decode()
         assert "Resilience Lab" in html
+        with_query = urllib.request.urlopen(base + "/?theme=dark&preset=Sem%20breaker").read()
+        assert b"Resilience Lab" in with_query
         req = urllib.request.Request(base + "/api/simulate", method="POST",
                                      data=json.dumps({"requests": 5}).encode(),
                                      headers={"Content-Type": "application/json"})
