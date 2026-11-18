@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resilience Lab</title>
+<style>
+:root{
+  --bg:#f6f5f1; --panel:#ffffff; --ink:#1b1d21; --muted:#6b6f78; --line:#e3e1da; --grid:#eeece6;
+  --ok:#1f8a5b; --fail:#d0442f; --warn:#c98a12; --info:#2f6fd0; --reject:#7a4fc9;
+  --closed:#1f8a5b; --open:#d0442f; --half:#c98a12;
+  --outage:rgba(208,68,47,.10); --accent:#1b1d21; --accent-ink:#fff;
+  --mono:ui-monospace,"Cascadia Code","JetBrains Mono",Consolas,monospace;
+  --sans:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111315; --panel:#181b1f; --ink:#e8e6e1; --muted:#8d929b; --line:#2a2e34; --grid:#20242a;
+  --ok:#3fbf86; --fail:#f0664f; --warn:#e8ac3a; --info:#6aa0ff; --reject:#a98af0;
+  --closed:#3fbf86; --open:#f0664f; --half:#e8ac3a; --outage:rgba(240,102,79,.12);
+  --accent:#e8e6e1; --accent-ink:#111315;
+}}
+:root[data-theme="dark"]{
+  --bg:#111315; --panel:#181b1f; --ink:#e8e6e1; --muted:#8d929b; --line:#2a2e34; --grid:#20242a;
+  --ok:#3fbf86; --fail:#f0664f; --warn:#e8ac3a; --info:#6aa0ff; --reject:#a98af0;
+  --closed:#3fbf86; --open:#f0664f; --half:#e8ac3a; --outage:rgba(240,102,79,.12);
+  --accent:#e8e6e1; --accent-ink:#111315;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--sans)}
+header{display:flex;align-items:baseline;gap:16px;padding:20px 24px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{margin:0;font-size:18px;letter-spacing:-.01em}
+header h1 span{font-family:var(--mono);font-weight:500;color:var(--muted);font-size:13px;margin-left:8px}
+header p{margin:0;color:var(--muted);flex:1;min-width:240px}
+.theme{background:none;border:1px solid var(--line);color:var(--muted);border-radius:6px;padding:4px 10px;cursor:pointer;font:inherit}
+.layout{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 60px)}
+aside{border-right:1px solid var(--line);padding:16px 18px 32px;overflow:auto}
+main{padding:20px 24px 40px;min-width:0}
+@media (max-width:860px){.layout{grid-template-columns:1fr}aside{border-right:none;border-bottom:1px solid var(--line)}main{padding:16px}}
+fieldset{border:none;margin:0 0 18px;padding:0}
+legend{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;padding:0}
+.f{display:grid;grid-template-columns:1fr 84px;align-items:center;gap:8px;margin:6px 0}
+.f label{font-size:13px}
+.f label small{display:block;color:var(--muted);font-size:11px}
+input,select{width:100%;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 7px;font:13px var(--mono)}
+input:focus,select:focus{outline:2px solid var(--info);outline-offset:1px}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+.presets button,.chips button{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:4px 10px;font:12px var(--sans);cursor:pointer}
+.presets button:hover,.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="false"]{opacity:.45}
+.run{width:100%;background:var(--accent);color:var(--accent-ink);border:none;border-radius:8px;padding:10px;font:600 14px var(--sans);cursor:pointer}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.kpi b{display:block;font:600 22px var(--mono);letter-spacing:-.02em}
+.kpi span{color:var(--muted);font-size:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 14px 10px;margin-bottom:18px}
+.card h2{font-size:13px;margin:0 0 10px;font-weight:600;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);font-weight:400}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+#timeline{width:100%;display:block;overflow:visible}
+#timeline text{font:11px var(--mono);fill:var(--muted)}
+.row:hover .rowbg{fill:var(--grid)}
+.row{cursor:pointer}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font:12px var(--mono);padding:6px 8px;border-radius:6px;white-space:pre;opacity:0;transition:opacity .08s;z-index:10}
+table{width:100%;border-collapse:collapse;font:12px var(--mono)}
+th{text-align:left;color:var(--muted);font-weight:500;padding:4px 8px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel)}
+td{padding:3px 8px;border-bottom:1px solid var(--grid);white-space:nowrap}
+.logwrap{max-height:340px;overflow:auto}
+.k{display:inline-block;padding:0 6px;border-radius:4px;font-size:11px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;font-weight:400}
+.err{color:var(--fail);font:12px var(--mono);margin-top:8px}
+.explain{color:var(--muted);font-size:12px;margin:6px 0 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Resilience Lab <span>resilient_http</span></h1>
+  <p>O cliente real rodando contra um servidor instável simulado — tempo virtual, resultado determinístico por semente.</p>
+  <button class="theme" id="theme" type="button">tema</button>
+</header>
+<div class="layout">
+<aside>
+  <div class="presets" id="presets"></div>
+  <form id="form" autocomplete="off"></form>
+  <button class="run" id="run" type="button">Simular</button>
+  <div class="err" id="err"></div>
+</aside>
+<main>
+  <div class="kpis" id="kpis"></div>
+  <div class="card">
+    <h2>Linha do tempo
+      <span class="legend">
+        <span><i style="background:var(--ok)"></i>sucesso</span>
+        <span><i style="background:var(--fail)"></i>falha</span>
+        <span><i style="background:var(--reject)"></i>rejeitada pelo breaker</span>
+        <span><i style="background:var(--warn)"></i>espera (backoff / token)</span>
+      </span>
+    </h2>
+    <svg id="timeline" role="img" aria-label="Linha do tempo da simulação"></svg>
+    <p class="explain">Cada linha é uma requisição lógica; os pontos são tentativas na rede. Clique numa linha para filtrar o log.</p>
+  </div>
+  <div class="card">
+    <h2>Eventos <span class="chips" id="chips"></span><span class="legend" id="filterinfo"></span></h2>
+    <div class="logwrap"><table><thead><tr><th>t (s)</th><th>req</th><th>evento</th><th>detalhes</th></tr></thead><tbody id="log"></tbody></table></div>
+  </div>
+</main>
+</div>
+<div class="tip" id="tip"></div>
+<script>
+const FIELDS = [
+  ["Carga", [
+    ["requests","Requisições","",1],["interval","Intervalo","s entre chamadas",0.05],
+  ]],
+  ["Servidor", [
+    ["latency","Latência","s",0.01],["failure_rate","Falha aleatória","0–1",0.05],
+    ["outage_start","Queda começa","s",0.5],["outage_end","Queda termina","s",0.5],
+    ["failure_mode","Tipo de falha","",null,["503","connect","timeout"]],
+  ]],
+  ["Retry", [
+    ["max_attempts","Tentativas máx.","inclui a 1ª",1],["base_delay","Atraso base","s",0.05],
+    ["multiplier","Multiplicador","",0.5],["max_delay","Atraso máx.","s",0.5],
+    ["jitter","Jitter","",null,["full","equal","none"]],
+  ]],
+  ["Rate limit", [
+    ["rate","Taxa","tokens/s · 0 desliga",0.5],["capacity","Capacidade","rajada",1],
+  ]],
+  ["Circuit breaker", [
+    ["failure_threshold","Falhas p/ abrir","0 desliga",1],["recovery_timeout","Recuperação","s aberto",0.5],
+  ]],
+  ["Geral", [
+    ["total_timeout","Prazo total","s · 0 desliga",0.5],["seed","Semente","",1],
+  ]],
+];
+const PRESETS = {
+  "Queda longa": {failure_rate:0.05,outage_start:8,outage_end:18,failure_mode:"503",failure_threshold:5,recovery_timeout:4},
+  "Instável": {failure_rate:0.35,outage_start:0,outage_end:0,failure_mode:"connect",failure_threshold:6,max_attempts:4},
+  "Rate limit apertado": {failure_rate:0.05,outage_start:0,outage_end:0,rate:1.5,capacity:2,interval:0.25},
+  "Sem breaker": {failure_rate:0.05,outage_start:8,outage_end:18,failure_threshold:0},
+  "Sem jitter": {jitter:"none",failure_rate:0.3,outage_start:0,outage_end:0,failure_threshold:0},
+};
+const COLORS = {ok:"--ok", http_error:"--fail", network_error:"--fail", rejected:"--reject", deadline:"--warn"};
+const LABELS = {ok:"sucesso", http_error:"erro HTTP", network_error:"erro de rede", rejected:"rejeitada", deadline:"prazo/limite"};
+const KIND_COLOR = {attempt:"--info",response:"--ok",error:"--fail",retry_scheduled:"--warn",gave_up:"--fail",rate_limited:"--warn",circuit_rejected:"--reject",circuit_state:"--ink"};
+const $ = s => document.querySelector(s);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+let defaults = {}, last = null, kindsOn = new Set(Object.keys(KIND_COLOR)), reqFilter = null;
+
+function buildForm(){
+  const f = $("#form"); f.innerHTML = "";
+  for (const [group, items] of FIELDS){
+    const fs = document.createElement("fieldset");
+    fs.innerHTML = `<legend>${group}</legend>`;
+    for (const [name,label,hint,step,opts] of items){
+      const row = document.createElement("div"); row.className = "f";
+      const ctl = opts
+        ? `<select id="f_${name}" name="${name}">${opts.map(o=>`<option>${o}</option>`).join("")}</select>`
+        : `<input id="f_${name}" name="${name}" type="number" step="${step}" min="0">`;
+      row.innerHTML = `<label for="f_${name}">${label}${hint?`<small>${hint}</small>`:""}</label>${ctl}`;
+      fs.appendChild(row);
+    }
+    f.appendChild(fs);
+  }
+  setValues(defaults);
+  f.addEventListener("change", debounce(run, 250));
+}
+function setValues(v){ for (const [k,val] of Object.entries(v)){ const el = $("#f_"+k); if (el) el.value = val; } }
+function getValues(){
+  const out = {};
+  for (const el of $("#form").elements){ if (!el.name) continue; out[el.name] = el.tagName==="SELECT" ? el.value : Number(el.value); }
+  return out;
+}
+function debounce(fn, ms){ let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }
+
+async function run(){
+  $("#err").textContent = "";
+  try{
+    const r = await fetch("/api/simulate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(getValues())});
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || r.statusText);
+    last = data; reqFilter = null; render();
+  }catch(e){ $("#err").textContent = "Erro: " + e.message; }
+}
+
+function render(){ if (!last) return; renderKpis(); renderTimeline(); renderLog(); }
+
+function renderKpis(){
+  const s = last.summary, o = s.outcomes, n = s.requests;
+  const pct = x => n ? Math.round(100*(x||0)/n) + "%" : "–";
+  const tiles = [
+    [pct(o.ok), "sucesso final"],
+    [s.network_calls, `chamadas de rede (${n} lógicas)`],
+    [s.retries, "retries agendados"],
+    [s.rejected_by_breaker, "rejeitadas pelo breaker"],
+    [s.breaker_trips, "vezes que o breaker abriu"],
+    [s.rate_limit_wait + "s", "esperando token"],
+  ];
+  $("#kpis").innerHTML = tiles.map(([b,t])=>`<div class="kpi"><b>${b}</b><span>${t}</span></div>`).join("");
+}
+
+function renderTimeline(){
+  const svg = $("#timeline"), W = svg.clientWidth || 800;
+  const reqs = last.requests, ev = last.events, sc = last.scenario;
+  const L = 92, R = 12, T = 8;
+  const dur = Math.max(last.duration, 0.001);
+  const x = t => L + (W - L - R) * (t / dur);
+  const rowH = Math.max(4, Math.min(12, 360 / reqs.length));
+  const laneServer = T, laneCB = T + 22, laneTok = T + 44, tokH = 40, laneReq = laneTok + tokH + 14;
+  const H = laneReq + rowH * reqs.length + 26;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("height", H);
+  let g = "";
+  // grade + eixo
+  const step = niceStep(dur);
+  for (let t = 0; t <= dur + 1e-9; t += step){
+    g += `<line x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${H-20}" stroke="${css("--grid")}"/>`;
+    g += `<text x="${x(t)}" y="${H-6}" text-anchor="middle">${+t.toFixed(2)}s</text>`;
+  }
+  // servidor: janela de queda
+  g += `<text x="0" y="${laneServer+12}">servidor</text>`;
+  g += `<rect x="${L}" y="${laneServer+2}" width="${W-L-R}" height="14" rx="3" fill="${css("--ok")}" opacity=".18"/>`;
+  if (sc.outage_end > sc.outage_start){
+    const a = Math.max(0, sc.outage_start), b = Math.min(dur, sc.outage_end);
+    if (b > a) g += `<rect x="${x(a)}" y="${laneServer+2}" width="${x(b)-x(a)}" height="14" rx="3" fill="${css("--fail")}" opacity=".55"><title>queda: ${a}s–${b}s</title></rect>`;
+  }
+  // breaker
+  g += `<text x="0" y="${laneCB+12}">breaker</text>`;
+  const changes = ev.filter(e => e.kind === "circuit_state");
+  let cur = "closed", from = 0;
+  const seg = (a, b, st) => {
+    const c = {closed:"--closed",open:"--open",half_open:"--half"}[st];
+    g += `<rect x="${x(a)}" y="${laneCB+2}" width="${Math.max(1,x(b)-x(a))}" height="14" fill="${css(c)}" opacity="${st==="closed"?.35:.85}"><title>${st} ${a.toFixed(2)}s–${b.toFixed(2)}s</title></rect>`;
+  };
+  if (sc.failure_threshold > 0){
+    for (const c of changes){ seg(from, c.t, cur); cur = c.new; from = c.t; }
+    seg(from, dur, cur);
+  } else {
+    g += `<text x="${L+4}" y="${laneCB+13}">desligado</text>`;
+  }
+  // tokens
+  g += `<text x="0" y="${laneTok+12}">tokens</text>`;
+  const tok = ev.filter(e => e.kind === "attempt" && e.tokens !== undefined);
+  if (sc.rate > 0 && tok.length){
+    const cap = sc.capacity, minT = Math.min(0, ...tok.map(e=>e.tokens));
+    const y = v => laneTok + tokH - (tokH * (v - minT) / (cap - minT || 1));
+    g += `<line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" stroke="${css("--line")}" stroke-dasharray="3 3"/>`;
+    g += `<polyline fill="none" stroke="${css("--info")}" stroke-width="1.5" points="${tok.map(e=>`${x(e.t)},${y(e.tokens)}`).join(" ")}"/>`;
+    g += `<text x="${W-R}" y="${laneTok+9}" text-anchor="end">cap ${cap}</text>`;
+  } else {
+    g += `<text x="${L+4}" y="${laneTok+13}">desligado</text>`;
+  }
+  // requisições
+  g += `<text x="0" y="${laneReq+10}">requisições</text>`;
+  const byReq = groupBy(ev, e => e.req);
+  reqs.forEach((r, i) => {
+    const y0 = laneReq + i * rowH, cy = y0 + rowH / 2, col = css(COLORS[r.outcome]);
+    let row = `<g class="row" data-id="${r.id}"><rect class="rowbg" x="${L}" y="${y0}" width="${W-L-R}" height="${rowH}" fill="transparent"/>`;
+    if (r.start > r.scheduled + 1e-6) row += `<line x1="${x(r.scheduled)}" x2="${x(r.start)}" y1="${cy}" y2="${cy}" stroke="${css("--muted")}" stroke-dasharray="1 2"/>`;
+    row += `<line x1="${x(r.start)}" x2="${x(Math.max(r.end, r.start))+1}" y1="${cy}" y2="${cy}" stroke="${css("--warn")}" stroke-width="${Math.max(1,rowH*.25)}" opacity=".7"/>`;
+    for (const e of byReq.get(r.id) || []){
+      if (e.kind === "response" || e.kind === "error"){
+        const ok = e.kind === "response" && e.status < 500 && e.status !== 429;
+        row += `<circle cx="${x(e.t)}" cy="${cy}" r="${Math.max(1.5,rowH*.32)}" fill="${css(ok?"--ok":"--fail")}"/>`;
+      } else if (e.kind === "circuit_rejected"){
+        const s = Math.max(2, rowH*.35);
+        row += `<path d="M${x(e.t)-s},${cy-s}L${x(e.t)+s},${cy+s}M${x(e.t)+s},${cy-s}L${x(e.t)-s},${cy+s}" stroke="${css("--reject")}" stroke-width="1.6"/>`;
+      }
+    }
+    if (reqFilter === r.id) row += `<rect x="${L}" y="${y0}" width="${W-L-R}" height="${rowH}" fill="none" stroke="${css("--info")}"/>`;
+    g += row + `<rect x="${L-8}" y="${y0+1}" width="4" height="${Math.max(1,rowH-2)}" fill="${col}"/></g>`;
+  });
+  svg.innerHTML = g;
+  svg.querySelectorAll(".row").forEach(el => {
+    const r = reqs[+el.dataset.id];
+    el.addEventListener("mousemove", ev2 => tip(ev2, `#${r.id}  ${LABELS[r.outcome]}${r.status?` (HTTP ${r.status})`:""}\ntentativas: ${r.attempts}\ninício ${r.start}s → fim ${r.end}s\nduração ${(r.end-r.start).toFixed(3)}s`));
+    el.addEventListener("mouseleave", () => $("#tip").style.opacity = 0);
+    el.addEventListener("click", () => { reqFilter = reqFilter === r.id ? null : r.id; renderTimeline(); renderLog(); });
+  });
+}
+
+function renderLog(){
+  const chips = $("#chips");
+  chips.innerHTML = Object.keys(KIND_COLOR).map(k => `<button type="button" data-k="${k}" aria-pressed="${kindsOn.has(k)}">${k}</button>`).join("");
+  chips.querySelectorAll("button").forEach(b => b.onclick = () => { kindsOn.has(b.dataset.k) ? kindsOn.delete(b.dataset.k) : kindsOn.add(b.dataset.k); renderLog(); });
+  $("#filterinfo").innerHTML = reqFilter === null ? "" : `filtrando req #${reqFilter} · <a href="#" id="clr">limpar</a>`;
+  const clr = $("#clr"); if (clr) clr.onclick = e => { e.preventDefault(); reqFilter = null; render(); };
+  const rows = last.events.filter(e => kindsOn.has(e.kind) && (reqFilter === null || e.req === reqFilter));
+  $("#log").innerHTML = rows.slice(0, 1500).map(e => {
+    const { kind, t, req, ...rest } = e;
+    const det = Object.entries(rest).map(([k,v]) => `${k}=${typeof v === "number" ? +v.toFixed(3) : v}`).join("  ");
+    const c = css(KIND_COLOR[kind]);
+    return `<tr><td>${t.toFixed(3)}</td><td>${req ?? ""}</td><td><span class="k" style="color:${c};border:1px solid ${c}">${kind}</span></td><td>${escapeHtml(det)}</td></tr>`;
+  }).join("");
+}
+
+function tip(ev, text){ const t = $("#tip"); t.textContent = text; t.style.opacity = 1; t.style.left = (ev.clientX + 14) + "px"; t.style.top = (ev.clientY + 12) + "px"; }
+function groupBy(arr, f){ const m = new Map(); for (const a of arr){ const k = f(a); if (!m.has(k)) m.set(k, []); m.get(k).push(a); } return m; }
+function niceStep(d){ const raw = d / 8, p = 10 ** Math.floor(Math.log10(raw)); return [1,2,5,10].map(m=>m*p).find(s => s >= raw); }
+function escapeHtml(s){ return s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function initTheme(){
+  let t = null; try { t = localStorage.getItem("rl-theme"); } catch {}
+  if (t) document.documentElement.dataset.theme = t;
+  $("#theme").onclick = () => {
+    const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+    const curr = document.documentElement.dataset.theme || (dark ? "dark" : "light");
+    const next = curr === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem("rl-theme", next); } catch {}
+    render();
+  };
+}
+
+(async function init(){
+  initTheme();
+  defaults = await (await fetch("/api/defaults")).json();
+  $("#presets").innerHTML = Object.keys(PRESETS).map(p => `<button type="button">${p}</button>`).join("");
+  $("#presets").querySelectorAll("button").forEach(b => b.onclick = () => { setValues({...defaults, ...PRESETS[b.textContent]}); run(); });
+  buildForm();
+  $("#run").onclick = run;
+  addEventListener("resize", debounce(renderTimeline, 120));
+  run();
+})();
+</script>
+</body>
+</html>
