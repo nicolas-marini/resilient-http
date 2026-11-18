@@ -10,6 +10,7 @@ Retry com backoff exponencial e jitter · Rate limiting por token bucket · Time
 ![httpx](https://img.shields.io/badge/httpx-0.27%2B-1f8a5b)
 ![tests](https://img.shields.io/badge/testes-145%20passando-1f8a5b)
 ![sync + async](https://img.shields.io/badge/API-sync%20%2B%20async-2f6fd0)
+![license](https://img.shields.io/badge/licen%C3%A7a-MIT-6b6f78)
 
 <img src="docs/img/dashboard-dark.png" alt="Dashboard Resilience Lab mostrando uma queda do servidor e o circuit breaker abrindo" width="900">
 
@@ -216,3 +217,7 @@ pytest -q
 | `test_demo.py` | determinismo do simulador e servidor HTTP de ponta a ponta |
 
 Nenhum teste toca a rede real nem dorme de verdade.
+
+## Licença
+
+Distribuído sob a licença [MIT](LICENSE). © 2026 Nicolas Marini.
